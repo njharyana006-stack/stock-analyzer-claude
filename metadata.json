@@ -1,0 +1,5 @@
+{
+  "name": "Stock Analyzer Rev03",
+  "description": "An AI-powered investment strategy app that provides synthesized stock recommendations based on technical analysis, sentiment data, and your personal risk profile.",
+  "requestFramePermissions": []
+}
