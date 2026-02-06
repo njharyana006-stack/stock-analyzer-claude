@@ -4,145 +4,253 @@ import type { NewsSentimentAnalysis, NewsTheme, NewsSentimentBreakdown as NewsSe
 import { InfoIcon, SparklesIcon, RationaleIcon, NewspaperIcon } from '../icons';
 import NewsSentimentBreakdown from './NewsSentimentBreakdown';
 
-const LastUpdated: React.FC = () => (
-    <div className="mt-auto pt-3 flex justify-end border-t border-slate-100 dark:border-white/5">
-        <span className="text-[10px] font-bold text-slate-400 dark:text-zinc-600 uppercase tracking-wider">
-            Updated: Just now
-        </span>
-    </div>
-);
-
+/* ─── Premium SVG Sentiment Gauge ─── */
 const SentimentScoreGauge: React.FC<{ score: number }> = ({ score }) => {
     const safeScore = score ?? 0;
     const percentage = ((safeScore + 10) / 20) * 100;
-    const angle = (percentage / 100) * 180;
-    const rotation = -90 + angle;
+    const clampedPct = Math.max(0, Math.min(100, percentage));
+
+    // SVG arc math
+    const radius = 80;
+    const strokeWidth = 12;
+    const cx = 100;
+    const cy = 95;
+    const startAngle = Math.PI;
+    const endAngle = 0;
+    const arcLength = Math.PI * radius;
+    const filledLength = (clampedPct / 100) * arcLength;
+
+    // Needle angle: -90 deg (left) to +90 deg (right)
+    const needleAngle = -90 + (clampedPct / 100) * 180;
 
     let statusText = 'Neutral';
-    let textColor = 'text-amber-600 dark:text-amber-400';
-    let ringColor = 'border-amber-500 dark:border-amber-400';
+    let glowColor = '#F59E0B';
+    let gradId = 'gaugeNeutral';
 
     if (safeScore > 3) {
-        statusText = 'Positive';
-        textColor = 'text-emerald-600 dark:text-green-400';
-        ringColor = 'border-emerald-500 dark:border-green-400';
+        statusText = 'Bullish Signal';
+        glowColor = '#10B981';
+        gradId = 'gaugeBull';
     } else if (safeScore < -3) {
-        statusText = 'Negative';
-        textColor = 'text-rose-600 dark:text-red-400';
-        ringColor = 'border-rose-500 dark:border-red-400';
+        statusText = 'Bearish Signal';
+        glowColor = '#EF4444';
+        gradId = 'gaugeBear';
     }
 
+    const describeArc = (r: number) => {
+        const x1 = cx - r;
+        const y1 = cy;
+        const x2 = cx + r;
+        return `M ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y1}`;
+    };
+
     return (
-        <div className="p-8 flex flex-col items-center justify-center h-full transition-all duration-300 hover:shadow-lg bg-white dark:bg-[#121214] border border-slate-200 dark:border-white/5 rounded-[24px] shadow-sm">
-            <h4 className="text-xs font-bold text-slate-500 dark:text-zinc-400 mb-6 uppercase tracking-widest">Sentiment Score</h4>
-            <div className="relative w-48 h-24 overflow-hidden mb-4">
-                <div className="absolute top-0 left-0 w-full h-full border-8 border-slate-100 dark:border-zinc-800 rounded-t-full border-b-0"></div>
-                <div 
-                    className="absolute top-0 left-0 w-full h-full border-8 border-rose-500/80 rounded-t-full border-b-0"
-                    style={{ clipPath: 'polygon(0 0, 35% 0, 35% 100%, 0 100%)' }}
-                ></div>
-                <div 
-                    className="absolute top-0 left-0 w-full h-full border-8 border-amber-500/80 rounded-t-full border-b-0"
-                    style={{ clipPath: 'polygon(35% 0, 65% 0, 65% 100%, 35% 100%)' }}
-                ></div>
-                <div 
-                    className="absolute top-0 left-0 w-full h-full border-8 border-emerald-500/80 rounded-t-full border-b-0"
-                    style={{ clipPath: 'polygon(65% 0, 100% 0, 100% 100%, 65% 100%)' }}
-                ></div>
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-20 bg-slate-800 dark:bg-white origin-bottom transition-transform duration-1000 ease-out" style={{ transform: `rotate(${rotation}deg)` }}>
-                    <div className={`w-4 h-4 rounded-full absolute -top-2 -left-1.5 ring-4 ring-white dark:ring-[#121214] shadow-md ${ringColor.replace('border-', 'bg-')}`}></div>
+        <div className="relative flex flex-col items-center justify-center h-full p-8 rounded-[28px] border border-white/[0.06] bg-gradient-to-b from-[#141418] to-[#0c0c0e] overflow-hidden group">
+            {/* Ambient glow */}
+            <div className="absolute inset-0 opacity-30 pointer-events-none" style={{ background: `radial-gradient(ellipse at 50% 80%, ${glowColor}22, transparent 70%)` }} />
+
+            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] mb-6 relative z-10">Sentiment Score</span>
+
+            <div className="relative z-10 w-[200px] h-[110px]">
+                <svg viewBox="0 0 200 110" className="w-full h-full">
+                    <defs>
+                        <linearGradient id="gaugeBull" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor="#F43F5E" />
+                            <stop offset="50%" stopColor="#F59E0B" />
+                            <stop offset="100%" stopColor="#10B981" />
+                        </linearGradient>
+                        <linearGradient id="gaugeBear" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor="#F43F5E" />
+                            <stop offset="50%" stopColor="#F59E0B" />
+                            <stop offset="100%" stopColor="#10B981" />
+                        </linearGradient>
+                        <linearGradient id="gaugeNeutral" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor="#F43F5E" />
+                            <stop offset="50%" stopColor="#F59E0B" />
+                            <stop offset="100%" stopColor="#10B981" />
+                        </linearGradient>
+                        <filter id="gaugeGlow">
+                            <feGaussianBlur stdDeviation="3" result="blur" />
+                            <feMerge>
+                                <feMergeNode in="blur" />
+                                <feMergeNode in="SourceGraphic" />
+                            </feMerge>
+                        </filter>
+                    </defs>
+
+                    {/* Background track */}
+                    <path d={describeArc(radius)} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={strokeWidth} strokeLinecap="round" />
+
+                    {/* Filled arc */}
+                    <path
+                        d={describeArc(radius)}
+                        fill="none"
+                        stroke={`url(#${gradId})`}
+                        strokeWidth={strokeWidth}
+                        strokeLinecap="round"
+                        strokeDasharray={`${arcLength}`}
+                        strokeDashoffset={arcLength - filledLength}
+                        filter="url(#gaugeGlow)"
+                        className="transition-all duration-[1500ms] ease-out"
+                    />
+
+                    {/* Needle */}
+                    <g transform={`rotate(${needleAngle}, ${cx}, ${cy})`} className="transition-all duration-[1500ms] ease-out">
+                        <line x1={cx} y1={cy} x2={cx} y2={cy - radius + strokeWidth + 8} stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.9" />
+                        <circle cx={cx} cy={cy} r="5" fill={glowColor} stroke="#121214" strokeWidth="2" />
+                    </g>
+                </svg>
+            </div>
+
+            <div className="relative z-10 text-center -mt-1">
+                <p className="text-5xl font-black text-white tracking-tighter tabular-nums">{safeScore.toFixed(1)}</p>
+                <div className="mt-2 flex items-center justify-center gap-2">
+                    <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: glowColor }} />
+                    <span className="text-sm font-bold" style={{ color: glowColor }}>{statusText}</span>
                 </div>
             </div>
-            <p className="text-5xl font-black text-slate-900 dark:text-white -mt-2 tracking-tighter">{safeScore.toFixed(1)}</p>
-            <p className={`text-lg font-bold mt-2 ${textColor}`}>{statusText}</p>
+
+            {/* Scale labels */}
+            <div className="flex justify-between w-full mt-4 px-2 relative z-10">
+                <span className="text-[9px] font-bold text-rose-500/60">-10</span>
+                <span className="text-[9px] font-bold text-zinc-600">0</span>
+                <span className="text-[9px] font-bold text-emerald-500/60">+10</span>
+            </div>
         </div>
     );
 };
 
-const ThemeCard: React.FC<{ theme: NewsTheme }> = ({ theme }) => {
+/* ─── Insight Card (Summary / Impact) ─── */
+const InsightCard: React.FC<{
+    icon: React.ReactNode;
+    iconBg: string;
+    title: string;
+    content: string;
+    accentColor: string;
+}> = ({ icon, iconBg, title, content, accentColor }) => (
+    <div className="group relative flex-1 flex flex-col p-6 md:p-7 rounded-[24px] border border-white/[0.06] bg-[#121214] overflow-hidden hover:border-white/[0.1] transition-all duration-300">
+        {/* Top accent line */}
+        <div className="absolute top-0 left-6 right-6 h-px" style={{ background: `linear-gradient(90deg, transparent, ${accentColor}40, transparent)` }} />
+
+        <div className="flex items-center gap-3 mb-4">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center border border-white/[0.06] ${iconBg}`}>
+                {icon}
+            </div>
+            <h4 className="text-sm font-bold text-white tracking-tight">{title}</h4>
+        </div>
+        <p className="text-[15px] text-zinc-400 leading-relaxed font-medium flex-grow">{content}</p>
+        <div className="mt-4 pt-3 border-t border-white/[0.04] flex justify-end">
+            <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-[0.15em]">Real-time analysis</span>
+        </div>
+    </div>
+);
+
+/* ─── Theme Card ─── */
+const ThemeCard: React.FC<{ theme: NewsTheme; index: number }> = ({ theme, index }) => {
     const sentimentScore = theme.sentiment_score ?? 0;
-    const scoreColor = sentimentScore > 0 ? 'text-emerald-700 dark:text-emerald-400' : sentimentScore < 0 ? 'text-rose-700 dark:text-rose-400' : 'text-slate-600 dark:text-zinc-400';
-    const bgColor = sentimentScore > 0 ? 'bg-emerald-50 dark:bg-emerald-500/10' : sentimentScore < 0 ? 'bg-rose-50 dark:bg-rose-500/10' : 'bg-slate-50 dark:bg-white/5';
-    const borderColor = sentimentScore > 0 ? 'border-emerald-100 dark:border-emerald-500/20' : sentimentScore < 0 ? 'border-rose-100 dark:border-rose-500/20' : 'border-slate-100 dark:border-white/5';
+    const isPositive = sentimentScore > 0;
+    const isNegative = sentimentScore < 0;
+    const accentColor = isPositive ? '#10B981' : isNegative ? '#EF4444' : '#71717A';
+    const scoreBg = isPositive ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : isNegative ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : 'bg-white/5 text-zinc-400 border-white/10';
 
     return (
-        <div className={`p-6 transition-all duration-300 hover:shadow-md hover:-translate-y-1 border ${borderColor} group bg-white dark:bg-[#121214] flex flex-col h-full rounded-[24px] shadow-sm`}>
-            <div className="flex justify-between items-start mb-4">
-                <h5 className="font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors text-sm">{theme.theme}</h5>
-                <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full border border-transparent ${bgColor} ${scoreColor}`}>{sentimentScore > 0 ? '+' : ''}{sentimentScore.toFixed(1)}</span>
+        <div
+            className="group relative p-5 rounded-[20px] border border-white/[0.06] bg-[#121214] hover:border-white/[0.12] transition-all duration-300 flex flex-col h-full overflow-hidden"
+            style={{ animationDelay: `${index * 80}ms` }}
+        >
+            {/* Left accent bar */}
+            <div className="absolute left-0 top-4 bottom-4 w-[3px] rounded-full opacity-60 group-hover:opacity-100 transition-opacity" style={{ backgroundColor: accentColor }} />
+
+            <div className="flex justify-between items-start mb-3 pl-3">
+                <h5 className="font-bold text-white text-sm leading-snug pr-3 group-hover:text-indigo-300 transition-colors">{theme.theme}</h5>
+                <span className={`flex-shrink-0 px-2.5 py-1 text-[10px] font-bold rounded-lg border ${scoreBg}`}>
+                    {sentimentScore > 0 ? '+' : ''}{sentimentScore.toFixed(1)}
+                </span>
             </div>
-            <p className="text-sm font-medium text-slate-600 dark:text-zinc-400 leading-relaxed flex-grow">{theme.summary}</p>
+            <p className="text-sm text-zinc-500 leading-relaxed flex-grow pl-3">{theme.summary}</p>
         </div>
     );
 };
 
+/* ─── Main Component ─── */
 interface AINewsSentimentTabProps {
-  analysis: NewsSentimentAnalysis;
-  breakdown?: NewsSentimentBreakdownType;
+    analysis: NewsSentimentAnalysis;
+    breakdown?: NewsSentimentBreakdownType;
 }
 
 const AINewsSentimentTab: React.FC<AINewsSentimentTabProps> = ({ analysis, breakdown }) => {
     if (!analysis) {
-        return <div className="p-8 text-center text-slate-500 dark:text-zinc-500 bg-white dark:bg-[#121214] rounded-[24px] border border-dashed border-slate-200 dark:border-white/10">AI News & Sentiment analysis is not available.</div>;
+        return (
+            <div className="p-12 text-center text-zinc-500 rounded-[24px] border border-dashed border-white/10 bg-white/[0.02]">
+                <SparklesIcon className="w-8 h-8 mx-auto mb-3 text-zinc-600" />
+                <p className="font-medium">AI News & Sentiment analysis is not available.</p>
+            </div>
+        );
     }
 
     return (
-        <div className="space-y-12 pb-12 animate-fade-in">
-            <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="space-y-10 pb-12 animate-fade-in">
+            {/* Gauge + Summaries */}
+            <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-1">
                     <SentimentScoreGauge score={analysis.overall_sentiment_score} />
                 </div>
-                <div className="lg:col-span-2 space-y-6 flex flex-col">
-                    <div className="p-6 md:p-8 flex-1 flex flex-col justify-center hover:shadow-md transition-shadow bg-white dark:bg-[#121214] border border-slate-200 dark:border-white/5 rounded-[24px] shadow-sm">
-                         <div className="flex items-center mb-4">
-                            <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center mr-3 text-indigo-500 border border-indigo-100 dark:border-indigo-500/20">
-                                <InfoIcon className="w-5 h-5" />
-                            </div>
-                            <h4 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">Sentiment Summary</h4>
-                        </div>
-                        <p className="text-base text-slate-700 dark:text-zinc-300 leading-relaxed font-medium">{analysis.sentiment_summary}</p>
-                        <LastUpdated />
-                    </div>
-                     <div className="p-6 md:p-8 flex-1 flex flex-col justify-center hover:shadow-md transition-shadow bg-white dark:bg-[#121214] border border-slate-200 dark:border-white/5 rounded-[24px] shadow-sm">
-                        <div className="flex items-center mb-4">
-                            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center mr-3 text-emerald-500 border border-emerald-100 dark:border-emerald-500/20">
-                                <RationaleIcon className="w-5 h-5" />
-                            </div>
-                            <h4 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">Market Impact Summary</h4>
-                        </div>
-                        <p className="text-base text-slate-700 dark:text-zinc-300 leading-relaxed font-medium">{analysis.market_impact_summary}</p>
-                        <LastUpdated />
-                    </div>
+                <div className="lg:col-span-2 flex flex-col gap-5">
+                    <InsightCard
+                        icon={<InfoIcon className="w-5 h-5 text-indigo-400" />}
+                        iconBg="bg-indigo-500/10"
+                        title="Sentiment Summary"
+                        content={analysis.sentiment_summary}
+                        accentColor="#6366F1"
+                    />
+                    <InsightCard
+                        icon={<RationaleIcon className="w-5 h-5 text-emerald-400" />}
+                        iconBg="bg-emerald-500/10"
+                        title="Market Impact Summary"
+                        content={analysis.market_impact_summary}
+                        accentColor="#10B981"
+                    />
                 </div>
             </section>
 
+            {/* Key Themes */}
             <section>
-                <h3 className="text-xl font-black mb-6 flex items-center text-slate-900 dark:text-white tracking-tight">
-                    <SparklesIcon className="w-6 h-6 mr-3 text-indigo-500" /> Key Themes Driving Sentiment
-                </h3>
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                        <SparklesIcon className="w-5 h-5 text-indigo-400" />
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-black text-white tracking-tight">Key Themes</h3>
+                        <p className="text-[11px] text-zinc-500 font-medium">Driving market sentiment</p>
+                    </div>
+                </div>
                 {analysis.key_themes && analysis.key_themes.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {analysis.key_themes.map((theme, index) => (
-                            <ThemeCard key={index} theme={theme} />
+                            <ThemeCard key={index} theme={theme} index={index} />
                         ))}
                     </div>
                 ) : (
-                    <div className="p-12 text-center text-slate-500 dark:text-zinc-500 border border-dashed border-slate-200 dark:border-white/10 rounded-[24px] bg-white/50 dark:bg-white/5">
+                    <div className="p-10 text-center text-zinc-600 border border-dashed border-white/10 rounded-[20px] bg-white/[0.02]">
                         No specific themes identified in current news cycle.
                     </div>
                 )}
             </section>
 
+            {/* Detailed Breakdown */}
             {breakdown && (
                 <section>
-                    <h3 className="text-xl font-black mb-6 flex items-center text-slate-900 dark:text-white tracking-tight">
-                        <NewspaperIcon className="w-6 h-6 mr-3 text-indigo-500" /> Detailed News Breakdown
-                    </h3>
-                    <div className="overflow-hidden bg-white dark:bg-[#121214] shadow-sm border border-slate-200 dark:border-white/5 rounded-[24px]">
-                        <NewsSentimentBreakdown data={breakdown} />
-                        <div className="px-8 pb-6">
-                            <LastUpdated />
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
+                            <NewspaperIcon className="w-5 h-5 text-violet-400" />
                         </div>
+                        <div>
+                            <h3 className="text-lg font-black text-white tracking-tight">Detailed News Breakdown</h3>
+                            <p className="text-[11px] text-zinc-500 font-medium">Categorized by sentiment polarity</p>
+                        </div>
+                    </div>
+                    <div className="rounded-[24px] border border-white/[0.06] bg-[#121214] overflow-hidden">
+                        <NewsSentimentBreakdown data={breakdown} />
                     </div>
                 </section>
             )}
