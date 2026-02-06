@@ -23,16 +23,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
     const [error, setError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-      // Handle OAuth callback redirect
-  useEffect(() => {
-    if (window.location.hash.includes('access_token')) {
-      // OAuth tokens received - wait for Supabase to process them
-      const timeout = setTimeout(() => {
-        onLogin();
-      }, 1000);
-      return () => clearTimeout(timeout);
-    }
-  }, [onLogin]);
+    // OAuth redirect is now handled by AuthContext which detects hash tokens,
+    // processes the session, and sets the user — causing AppContent to skip this page.
 
     const validatePassword = (pwd: string) => {
         if (pwd.length < 7) return "Password must be at least 7 characters.";

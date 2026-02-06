@@ -137,7 +137,14 @@ const MainContent: React.FC<{
 const AppContent: React.FC = () => {
   const { user, loading, isGuest } = useAuth();
   const { hasConsented, loading: consentLoading } = useConsent();
-  const [showSplash, setShowSplash] = useState(true);
+  // Skip splash screen when returning from OAuth redirect (user already authenticated)
+  const [showSplash, setShowSplash] = useState(() => {
+    const hash = window.location.hash;
+    if (hash && (hash.includes('access_token') || hash.includes('refresh_token'))) {
+      return false;
+    }
+    return true;
+  });
   const [ticker, setTicker] = useState<string>('NOW');
   const [riskProfile, setRiskProfile] = useState<RiskProfile>('Moderate');
   const [analysisResult, setAnalysisResult] = useState<AnalysisResponse | null>(null);

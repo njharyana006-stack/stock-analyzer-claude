@@ -28,27 +28,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return;
         }
 
-        // Check active session from Supabase
-        const getSession = async () => {
-            try {
-                const { data: { session }, error } = await supabase.auth.getSession();
-                if (error) {
-                    console.warn("Supabase auth check failed:", error.message);
-                }
-                if (session?.user) {
-                    setUser(session.user);
-                    setIsGuest(false);
-                }
-            } catch (e) {
-                console.error("Auth initialization error:", e);
-            } finally {
-                setLoading(false);
+        // Detect OAuth redirect (tokens in URL hash after Google/Apple redirect)
+        const hash = window.location.hash;
+        const isOAuthRedirect = Boolean(hash && (hash.includes('access_token') || hash.includes('refresh_token')));
+
+        // Helper to clean OAuth tokens from URL after processing
+        const cleanUpOAuthHash = () => {
+            if (window.location.hash) {
+                window.history.replaceState(null, '', window.location.pathname + window.location.search);
             }
         };
 
-        getSession();
-
-        // Listen for Supabase auth changes
+        // Set up auth state listener FIRST so we don't miss the SIGNED_IN event
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             if (session?.user) {
                 setUser(session.user);
@@ -59,10 +50,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 // Only clear user if we aren't in a forced guest session
                 setUser(null);
             }
+            if (isOAuthRedirect) {
+                cleanUpOAuthHash();
+            }
             setLoading(false);
         });
 
-        return () => subscription.unsubscribe();
+        // Check active session from Supabase
+        const getSession = async () => {
+            try {
+                const { data: { session }, error } = await supabase.auth.getSession();
+                if (error) {
+                    console.warn("Supabase auth check failed:", error.message);
+                }
+                if (session?.user) {
+                    setUser(session.user);
+                    setIsGuest(false);
+                    if (isOAuthRedirect) {
+                        cleanUpOAuthHash();
+                    }
+                }
+            } catch (e) {
+                console.error("Auth initialization error:", e);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        getSession();
+
+        // Safety timeout: ensure loading stops even if OAuth processing stalls
+        let oauthTimeout: ReturnType<typeof setTimeout> | null = null;
+        if (isOAuthRedirect) {
+            oauthTimeout = setTimeout(() => {
+                cleanUpOAuthHash();
+                setLoading(false);
+            }, 5000);
+        }
+
+        return () => {
+            subscription.unsubscribe();
+            if (oauthTimeout) clearTimeout(oauthTimeout);
+        };
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const setupGuestUser = () => {

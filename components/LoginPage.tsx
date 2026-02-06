@@ -20,19 +20,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     const [error, setError] = useState<string | null>(null);
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-    // Handle OAuth redirect callback - detect tokens in URL hash after Google/Apple redirect
-    useEffect(() => {
-        const hash = window.location.hash;
-        if (hash && (hash.includes('access_token') || hash.includes('refresh_token'))) {
-            setIsLoading(true);
-            // Supabase automatically picks up tokens from URL via onAuthStateChange in AuthContext.
-            // We wait briefly then call onLogin to transition to the dashboard.
-            const timeout = setTimeout(() => {
-                onLogin();
-            }, 1500);
-            return () => clearTimeout(timeout);
-        }
-    }, [onLogin]);
+    // OAuth redirect is now handled by AuthContext which detects hash tokens,
+    // processes the session, and sets the user — causing AppContent to skip LoginPage.
 
     const handleAuth = async (e: React.FormEvent) => {
         e.preventDefault();
